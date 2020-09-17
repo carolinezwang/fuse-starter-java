@@ -2,6 +2,8 @@ package org.galatea.starter.entrypoint;
 
 //import com.fasterxml.jackson.databind.node.ObjectNode;
 //import com.fasterxml.jackson.databind.node.ValueNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.util.Iterator;
 //import java.util.List;
@@ -41,7 +43,7 @@ public class PriceFinderController extends BaseRestController{
    * Send the received text to the HalService to be processed and send the result out.
    */
 
-  public String endpoint(
+  public Map<String, ArrayNode> endpoint(
       @RequestParam(value = "stock") final String stock,
       @RequestParam(value = "days") final int days) throws IOException {
 

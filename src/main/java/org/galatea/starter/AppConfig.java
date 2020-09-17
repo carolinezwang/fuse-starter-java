@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.sf.aspect4log.aspect.LogAspect;
 import org.galatea.starter.domain.SettlementMission;
 import org.galatea.starter.service.IAgreementTransformer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -15,6 +16,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @Configuration
@@ -76,4 +78,10 @@ public class AppConfig {
     return Logger.Level.BASIC;
   }
 
+  @Bean
+  public RestTemplate restTemplate(){
+    return new RestTemplate();
+  }
+  @Autowired
+  RestTemplate restTemplate;
 }

@@ -71,5 +71,5 @@ spring:
 ---
 # Mappings for Rest Controllers
 webservice:
-  halpath: /halpath
+  halpath: /hal
   avpath: /prices
