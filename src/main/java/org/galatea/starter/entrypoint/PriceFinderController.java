@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.sf.aspect4log.Log;
 import net.sf.aspect4log.Log.Level;
 //import org.galatea.starter.service.HalService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,6 +36,8 @@ import java.util.Map;
 @Log(enterLevel = Level.INFO, exitLevel = Level.INFO)
 @RestController
 public class PriceFinderController extends BaseRestController{
+  @Autowired
+  RequestProcessor requestProcessor;
 
   @NonNull
   // @GetMapping to link http GET request to this method
@@ -47,6 +50,6 @@ public class PriceFinderController extends BaseRestController{
       @RequestParam(value = "stock") final String stock,
       @RequestParam(value = "days") final int days) throws IOException {
 
-    return RequestProcessor.requestProcess(stock, days);
+    return requestProcessor.checkMongoDB(stock, days);
   }
 }

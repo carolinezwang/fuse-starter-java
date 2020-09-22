@@ -4,6 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.util.Optional;
+import org.aspectj.apache.bcel.generic.InstructionList;
+import org.galatea.starter.StockDataRepository;
 import org.json.JSONObject;
 
 
@@ -14,13 +20,59 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Example;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-
+@Service
 public class RequestProcessor {
+  @Autowired
+  StockDataRepository stockDataRepository;
+  private Object MongoDAO;
 
-  public static Map<String, ArrayNode> createAVPojo(String stock, int days) throws IOException, NullPointerException {
+  public Map<String, ArrayNode> checkMongoDB (String stock, int days) throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode newRoot = mapper.createObjectNode();
+    ArrayNode jsonArray = newRoot.putArray(String.format("%s Daily Stock Prices for Last %d Days",stock, days));
+    Map<String, ArrayNode> ans = new HashMap<String, ArrayNode>();
+    boolean no = false;
+
+    LocalDate today = LocalDate.now();
+    for (LocalDate date = today; date.isBefore(today.plusDays(days)); date = date.minusDays(1)) {
+      //DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
+      String dateToFind = date.toString();
+      //find stock and date combo in database
+      Query query = new Query();
+      query.addCriteria(Criteria.where("stock").is(stock));
+      query.addCriteria(Criteria.where("date").is(dateToFind));
+
+      Optional<MongoDAO> stockData = stockDataRepository.findOneByStockAndDate(stock,dateToFind);
+
+      if (stockData.isPresent()) {
+        //if yes, format mongoDAO as object node, add to array node, and continue loop
+        MongoDAO user = stockData.get();
+
+        ObjectNode objNode = mapper.createObjectNode();
+        objNode.putPOJO(String.format("%s Stock Price on %s", user.stock, user.date), user.prices);
+        jsonArray.add(objNode);
+      }
+      else{ //if not present, break and return accessAV
+        ans = accessAV(stock, days);
+        return ans;
+      }
+    }
+
+    ans.put(String.format("%s Daily Stock Prices for Last %d Days", stock, days), jsonArray);
+    return ans;
+
+
+  }
+
+  public Map<String, ArrayNode> accessAV(String stock, int days) throws IOException, NullPointerException {
     //sends GET request to AlphaVantage and puts received data into "response"
     RestTemplate restTemplate = new RestTemplate();
     final String alphaVantageUrl =
@@ -54,6 +106,7 @@ public class RequestProcessor {
       ObjectNode objNode = mapper.createObjectNode();
       objNode.putPOJO(String.format("%s Stock Price on %s",MDAO.stock, MDAO.date), MDAO.prices);
       jsonArray.add(objNode);
+      stockDataRepository.insert(MDAO);
 
 
       //decrement counter for loop
@@ -64,8 +117,8 @@ public class RequestProcessor {
     return ans;
     }
 
-  public static Map<String, ArrayNode> requestProcess(String stock, int days) throws IOException{
-    Map avPojo = createAVPojo(stock, days);
+  /*public Map<String, ArrayNode> requestProcess(String stock, int days) throws IOException{
+    Map avPojo = checkMongoDB(stock, days);
     return avPojo;
-  }
+  }*/
 }
