@@ -45,33 +45,20 @@ public class PriceFinderControllerTest extends ASpringTest {
   private MockMvc mvc;
   @MockBean
   private RestTemplate mockRestTemplate;
-  //@Autowired
-  //private RequestProcessor requestService;
+
 
   @Test
   public void testEndpoint() throws Exception {
     ObjectMapper mapper = new ObjectMapper();
     String stock = "IBM";
-    /*String result = "{\n"
-        + "  \"IBM Daily Stock Prices for Last 1 Days\": [\n"
-        + "    {\n"
-        + "      \"IBM Stock Price on 2020-09-15\": {\n"
-        + "        \"1. open\": \"122.8200\",\n"
-        + "        \"2. high\": \"123.4000\",\n"
-        + "        \"3. low\": \"122.2400\",\n"
-        + "        \"4. close\": \"122.4400\",\n"
-        + "        \"5. volume\": \"2915221\"\n"
-        + "      }\n"
-        + "    }\n"
-        + "  ]\n"
-        + "}";*/
+
+    //String result is expected outputted result from accessAV service given the input from website
     String result = "{\"IBM Daily Stock Prices for Last 1 Days\":[{\"IBM Stock Price on 2020-09-15\":{\"1. open\":\"122.8200\",\"2. high\":\"123.4000\",\"3. low\":\"122.2400\",\"4. close\":\"122.4400\",\"5. volume\":\"2915221\"}}]}";
-    JsonNode jsNode = mapper.readTree(result);
-    String formattedResult = mapper.writeValueAsString(jsNode);
+
     String avURL = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + stock + "&apikey=795KUDT4Z4PZM2DP";
 
-    //AV output as string body for response entity
-    //(mock output for .getForEntity by mock rest template)
+    //AV output (copied from API query) as string body for response entity
+    //acts as mock output for .getForEntity by mock rest template
     String body = "{\n"
         + "  \"Meta Data\": {\n"
         + "    \"1. Information\": \"Daily Prices (open, high, low, close) and Volumes\",\n"
@@ -784,17 +771,16 @@ public class PriceFinderControllerTest extends ASpringTest {
         + "  }\n"
         + "}";
 
-    //File mockOutput = new File("C:\\Users\\carol\\IdeaProjects\\fuse-starter-java\\src\\test\\java\\org\\galatea\\starter\\entrypoint\\mockoutput.json");
-    //String body = mapper.readValue(mockOutput, String.class);
     given(this.mockRestTemplate.getForEntity(avURL, String.class))
         .willReturn(new ResponseEntity(body, HttpStatus.OK));
 
+    // perform test on mock template
     this.mvc.perform(
         get("/prices")
             .param("stock", "IBM")
             .param("days", "1")
             .accept(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(MockMvcResultMatchers.content().json(result));
+            .andExpect(MockMvcResultMatchers.content().json(result)); // use this instead of jsonPath to be more lenient with formatting differences
             //.andExpect(jsonPath("$", is(formattedResult)));
 
   }

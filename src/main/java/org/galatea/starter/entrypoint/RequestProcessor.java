@@ -1,29 +1,18 @@
 package org.galatea.starter.entrypoint;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
+
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.Optional;
-import org.aspectj.apache.bcel.generic.InstructionList;
 import org.galatea.starter.StockDataRepository;
-import org.json.JSONObject;
-
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -32,24 +21,20 @@ import org.springframework.web.client.RestTemplate;
 public class RequestProcessor {
   @Autowired
   StockDataRepository stockDataRepository;
-  private Object MongoDAO;
 
   public Map<String, ArrayNode> checkMongoDB (String stock, int days) throws IOException {
     ObjectMapper mapper = new ObjectMapper();
     ObjectNode newRoot = mapper.createObjectNode();
     ArrayNode jsonArray = newRoot.putArray(String.format("%s Daily Stock Prices for Last %d Days",stock, days));
     Map<String, ArrayNode> ans = new HashMap<String, ArrayNode>();
-    boolean no = false;
 
+    //loop through the last n days (starting from today) and see if all the information is in the database
+    //expect more recent days to not be in the repository, so for-loop should break earlier on rather than later if info is missing
     LocalDate today = LocalDate.now();
     for (LocalDate date = today; date.isBefore(today.plusDays(days)); date = date.minusDays(1)) {
-      //DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
       String dateToFind = date.toString();
-      //find stock and date combo in database
-      Query query = new Query();
-      query.addCriteria(Criteria.where("stock").is(stock));
-      query.addCriteria(Criteria.where("date").is(dateToFind));
 
+      //find stock and date combo in database
       Optional<MongoDAO> stockData = stockDataRepository.findOneByStockAndDate(stock,dateToFind);
 
       if (stockData.isPresent()) {
@@ -57,10 +42,10 @@ public class RequestProcessor {
         MongoDAO user = stockData.get();
 
         ObjectNode objNode = mapper.createObjectNode();
-        objNode.putPOJO(String.format("%s Stock Price on %s", user.stock, user.date), user.prices);
+        objNode.putPOJO(String.format("%s Stock Price on %s", user.stock, user.date), user.ds);
         jsonArray.add(objNode);
       }
-      else{ //if not present, break and return accessAV
+      else{ //if not present, break and return accessAV (which will go to alpha vantage and add any missing information)
         ans = accessAV(stock, days);
         return ans;
       }
@@ -101,24 +86,21 @@ public class RequestProcessor {
       JsonNode priceList = field.getValue();
 
       DailyStock ds = mapper.treeToValue(priceList, DailyStock.class);
-      TimeSeriesDaily tsdAlpha = new TimeSeriesDaily(date, ds); // POJO instance from Alphavantage
       MongoDAO MDAO = new MongoDAO(stock,date,ds);
       ObjectNode objNode = mapper.createObjectNode();
-      objNode.putPOJO(String.format("%s Stock Price on %s",MDAO.stock, MDAO.date), MDAO.prices);
+      objNode.putPOJO(String.format("%s Stock Price on %s",MDAO.stock, MDAO.date), MDAO.ds);
       jsonArray.add(objNode);
+
       stockDataRepository.insert(MDAO);
 
 
       //decrement counter for loop
       counter -= 1;
     }
+    //return json output as a hashmap with a header
     Map<String, ArrayNode> ans = new HashMap<String, ArrayNode>();
     ans.put(String.format("%s Daily Stock Prices for Last %d Days",stock, days),jsonArray);
     return ans;
     }
 
-  /*public Map<String, ArrayNode> requestProcess(String stock, int days) throws IOException{
-    Map avPojo = checkMongoDB(stock, days);
-    return avPojo;
-  }*/
 }
