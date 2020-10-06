@@ -35,7 +35,7 @@ public class RequestProcessor {
       String dateToFind = date.toString();
 
       //find stock and date combo in database
-      Optional<MongoDAO> stockData = stockDataRepository.findOneByStockAndDate(stock,dateToFind);
+      Optional<MongoDAO> stockData = stockDataRepository.findFirstByStockAndDate(stock,dateToFind);
 
       if (stockData.isPresent()) {
         //if yes, format mongoDAO as object node, add to array node, and continue loop
@@ -91,8 +91,12 @@ public class RequestProcessor {
       objNode.putPOJO(String.format("%s Stock Price on %s",MDAO.stock, MDAO.date), MDAO.ds);
       jsonArray.add(objNode);
 
-      stockDataRepository.insert(MDAO);
+      //check if mongo object is already in data base before adding it (so no duplicates)
+      Optional<MongoDAO> stockData = stockDataRepository.findFirstByStockAndDate(stock,date);
 
+      if (!stockData.isPresent()) {
+        stockDataRepository.insert(MDAO);
+      }
 
       //decrement counter for loop
       counter -= 1;
